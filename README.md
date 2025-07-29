@@ -71,13 +71,13 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 3. **Start Command**: `npm start`
 4. **Environment Variables**: `PORT` (auto-provided by Render)
 
-### Frontend Deployment (Vercel/Netlify/Render)
+### Frontend Deployment (Render)
 
 1. **Root Directory**: `frontend`
 2. **Build Command**: `npm run build`
 3. **Start Command**: `npm start`
 4. **Environment Variables**:
-   - `NEXT_PUBLIC_API_URL=https://your-backend-url.onrender.com`
+   - `NEXT_PUBLIC_API_URL=https://odatademosearch-backend.onrender.com`
 
 ### Full Setup Commands
 
@@ -120,4 +120,4 @@ Response:
 - **External API**: Northwind OData Service
 - **Module System**: ES Modules
 - **CORS**: Enabled for cross-origin requests
-- **Deployment**: Render.com (backend), Vercel/Netlify (frontend)
+- **Deployment**: Render.com (backend), Render.com (frontend)
