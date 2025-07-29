@@ -42,9 +42,9 @@ export default function HomePage() {
       setLoading(true);
       setError("");
       try {
-        const response = await fetch(
-          `http://localhost:3001/api/search?q=${query}`
-        );
+        const apiUrl =
+          process.env.NEXT_PUBLIC_API_URL ;
+        const response = await fetch(`${apiUrl}/api/search?q=${query}`);
         if (!response.ok) {
           const errData = await response.json();
           throw new Error(
@@ -54,7 +54,9 @@ export default function HomePage() {
         const data: Customer[] = await response.json();
         setResults(data);
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        setError(
+          err instanceof Error ? err.message : "An unknown error occurred"
+        );
       } finally {
         setLoading(false);
       }

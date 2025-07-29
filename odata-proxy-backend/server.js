@@ -68,7 +68,7 @@ app.get("/api/search", async (req, res) => {
   }
 });
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`✅ Proxy Backend is running at http://localhost:${PORT}`);
 });
