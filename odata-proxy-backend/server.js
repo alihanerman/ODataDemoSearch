@@ -6,17 +6,22 @@ import axios from "axios";
 const app = express();
 app.use(cors());
 
-// --- Configuration for the Northwind OData Service ---
+// --- Configuration ---
 const ODATA_SERVICE_URL =
   "https://services.odata.org/V4/Northwind/Northwind.svc";
-
-// We will query the 'Customers' entity set.
 const ODATA_ENTITY = "Customers";
 
-// We will search within these fields.
-const SEARCH_FIELDS = ["CompanyName", "ContactName", "City", "Country"];
+// CHANGE 1: We are ordering the fields by search priority.
+// Highest priority is 'Country', lowest is 'ContactName'.
+const PRIORITY_SEARCH_FIELDS = [
+  "Country",
+  "City",
+  "CompanyName",
+  "ContactName",
+];
 
-// We will only retrieve these fields in the results (for performance).
+// CHANGE 2: CustomerID is mandatory to prevent duplicate records.
+// We add all fields to be sent to the frontend here.
 const SELECT_FIELDS = [
   "CustomerID",
   "CompanyName",
@@ -26,7 +31,6 @@ const SELECT_FIELDS = [
 ];
 // ----------------------------------------------------
 
-// API endpoint that the frontend will call: /api/search?q=search_term
 app.get("/api/search", async (req, res) => {
   const searchTerm = req.query.q;
 
@@ -34,32 +38,46 @@ app.get("/api/search", async (req, res) => {
     return res.status(400).json({ message: "Search term (q) is missing." });
   }
 
-  // Convert the incoming search term into an OData $filter query.
-  // The single quote ' character causes issues in OData, so we replace it with ''.
   const escapedTerm = searchTerm.toLowerCase().replace(/'/g, "''");
 
-  // Example: contains(tolower(CompanyName), 'alfred') or contains(tolower(ContactName), 'alfred') ...
-  const filterConditions = SEARCH_FIELDS.map(
-    (field) => `contains(tolower(${field}), '${escapedTerm}')`
-  ).join(" or ");
-
-  const odataFilter = `$filter=${filterConditions}`;
+  // CHANGE 3: We are creating a separate query for each priority field.
   const odataSelect = `$select=${SELECT_FIELDS.join(",")}`;
-  const odataTop = `$top=20`; // Fetch a maximum of 20 results.
+  const odataTop = `$top=10`; // Let's get a maximum of 10 relevant results from each query.
 
-  // Construct the full URL to be sent to Northwind.
-  const fullUrl = `${ODATA_SERVICE_URL}/${ODATA_ENTITY}?${odataFilter}&${odataSelect}&${odataTop}`;
+  const promises = PRIORITY_SEARCH_FIELDS.map((field) => {
+    const odataFilter = `$filter=startswith(tolower(${field}), '${escapedTerm}')`;
+    const odataOrderBy = `$orderby=${field}`; // Also sort the results within their own scope
+    const fullUrl = `${ODATA_SERVICE_URL}/${ODATA_ENTITY}?${odataFilter}&${odataSelect}&${odataTop}&${odataOrderBy}`;
 
-  console.log(`Sending request: ${fullUrl}`);
+    console.log(`Sending priority query for ${field}: ${fullUrl}`);
+
+    // We return the Axios request as a promise.
+    return axios.get(fullUrl, { headers: { Accept: "application/json" } });
+  });
 
   try {
-    // Make a GET request to the Northwind service using Axios.
-    const odataResponse = await axios.get(fullUrl, {
-      headers: { Accept: "application/json" },
+    // CHANGE 4: We send all queries in parallel and wait for the responses.
+    const responses = await Promise.all(promises);
+
+    // CHANGE 5: We combine the results and remove duplicates using the CustomerID.
+    const combinedResults = new Map();
+
+    responses.forEach((response) => {
+      const customers = response.data.value;
+      customers.forEach((customer) => {
+        // If this customer has not been added before, add it to the Map.
+        // This way, the result from the higher-priority query is preserved.
+        if (!combinedResults.has(customer.CustomerID)) {
+          combinedResults.set(customer.CustomerID, customer);
+        }
+      });
     });
 
-    // Send the "value" array from the Northwind response to the frontend.
-    res.status(200).json(odataResponse.data.value);
+    // We convert the values in the Map to an array, based on insertion order (priority order).
+    const finalResults = Array.from(combinedResults.values());
+
+    // We send a maximum of 20 results in total to the frontend.
+    res.status(200).json(finalResults.slice(0, 20));
   } catch (error) {
     console.error("Error connecting to Northwind service:", error.message);
     res
