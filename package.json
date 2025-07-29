@@ -1,1 +1,25 @@
- 
+{
+  "name": "odata-demo-search",
+  "version": "1.0.0",
+  "description": "A full-stack application demonstrating OData service integration with search functionality",
+  "main": "index.js",
+  "scripts": {
+    "start:backend": "cd odata-proxy-backend && node server.js",
+    "install:backend": "cd odata-proxy-backend && npm install",
+    "dev": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:frontend": "cd frontend && npm start"
+  },
+  "keywords": [
+    "odata",
+    "northwind",
+    "search",
+    "nodejs",
+    "express",
+    "proxy"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
